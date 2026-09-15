@@ -1,0 +1,56 @@
+{
+  "manifest_version": 3,
+  "name": "Slop Lens",
+  "version": "0.0.1",
+  "description": "Score any page or PDF for AI-slop writing patterns. Runs entirely offline, with no network permissions and no telemetry.",
+  "author": "Ali",
+  "homepage_url": "https://github.com/FenkoHQ/slop-lens",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "optional_host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "src/background.js",
+    "scripts": [
+      "src/settings.js",
+      "src/indicator.js",
+      "src/background.js"
+    ]
+  },
+  "action": {
+    "default_popup": "src/popup.html",
+    "default_title": "Slop Lens: score this page",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "options_ui": {
+    "page": "src/options.html",
+    "open_in_tab": true
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; worker-src 'self'; object-src 'self'"
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "{411dc062-62b1-4928-9713-6f0a2fc383de}",
+      "strict_min_version": "128.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  }
+}

@@ -1,0 +1,61 @@
+name: Release
+
+# Push a tag matching the manifest version (e.g. v0.0.1) to publish a GitHub
+# release. Nothing goes to a browser store or gets signed: the zip is loaded
+# unpacked in Chrome, or as a temporary add-on in Firefox.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: astral-sh/setup-uv@v6
+
+      # The tag names the release, the manifest decides what ships.
+      - name: Check tag
+        run: |
+          version=$(jq -r .version manifest.json)
+          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
+            echo "tag $GITHUB_REF_NAME does not match manifest version $version"
+            exit 1
+          fi
+
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      # The runner's Chromium only starts with no sandbox, and only honours
+      # --load-extension with unsafe extension debugging on. The probe runs
+      # whatever `chromium` is on PATH, so wrap it there.
+      - name: Wrap Chromium for the runner
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          printf '#!/bin/sh\nexec /usr/bin/chromium --no-sandbox --enable-unsafe-extension-debugging "$@"\n' > "$RUNNER_TEMP/bin/chromium"
+          chmod +x "$RUNNER_TEMP/bin/chromium"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - name: Verify
+        run: ./test/verify.sh
+
+      - name: Package
+        run: |
+          python3 tools/package.py
+          mkdir dist
+          mv "../slop-lens-$VERSION.zip" dist/
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS
+          gh release create "$GITHUB_REF_NAME" --title "Slop Lens $VERSION" --generate-notes *

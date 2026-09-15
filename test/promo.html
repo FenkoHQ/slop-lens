@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Slop Lens promo</title>
+    <link rel="stylesheet" href="../src/popup.css" />
+    <style>
+      /* A 1280x800 stage driven frame by frame, so the capture is smooth and
+         repeatable rather than at the mercy of wall-clock timing. */
+      html, body { margin: 0; height: 100%; }
+
+      body {
+        width: 1280px;
+        height: 800px;
+        max-height: none;
+        overflow: hidden;
+        background:
+          radial-gradient(900px 620px at 16% 24%, rgba(245, 166, 35, 0.16), transparent 62%),
+          #0d1117;
+        color: #e6edf3;
+        font-family: var(--font-sans);
+      }
+
+      .stage { position: relative; width: 1280px; height: 800px; }
+
+      .copy {
+        position: absolute;
+        left: 88px;
+        top: 236px;
+        width: 470px;
+      }
+
+      .copy h1 {
+        margin: 0 0 18px;
+        font-size: 48px;
+        font-weight: 800;
+        line-height: 1.02;
+        letter-spacing: -0.035em;
+      }
+
+      .copy h1 em { font-style: normal; color: #f5a623; }
+
+      .copy p {
+        margin: 0;
+        font-size: 19px;
+        line-height: 1.5;
+        color: #9198a1;
+      }
+
+      .facts {
+        position: absolute;
+        left: 88px;
+        top: 470px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        width: 470px;
+      }
+
+      .fact {
+        padding: 6px 12px;
+        border: 1px solid #30363d;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 500;
+      }
+
+      .fact b { color: #f5a623; font-weight: 700; }
+
+      .device {
+        position: absolute;
+        right: 88px;
+        top: 100px;
+        transition: none;
+        border-radius: 14px;
+        overflow: hidden;
+        background: #0d1117;
+        box-shadow: 0 40px 90px rgba(0, 0, 0, 0.6), 0 0 0 1px #30363d;
+      }
+
+      .device iframe {
+        position: absolute;
+        inset: 0;
+        border: 0;
+        display: block;
+      }
+
+      .outro {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-content: center;
+        justify-items: center;
+        gap: 18px;
+        text-align: center;
+        background: #0d1117;
+      }
+
+      .outro .mark svg { width: 64px; height: 64px; color: #f5a623; }
+
+      .outro h2 {
+        margin: 0;
+        font-size: 52px;
+        font-weight: 800;
+        letter-spacing: -0.035em;
+        text-transform: none;
+        color: #e6edf3;
+      }
+
+      .outro p {
+        margin: 0;
+        font-size: 20px;
+        color: #9198a1;
+      }
+
+      .outro .repo {
+        margin-top: 10px;
+        font-family: var(--font-mono);
+        font-size: 15px;
+        color: #f5a623;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage">
+      <div class="copy">
+        <h1 id="headline"></h1>
+        <p id="blurb"></p>
+      </div>
+
+      <div class="facts" id="facts">
+        <span class="fact"><b>24</b> rules</span>
+        <span class="fact"><b>0</b> network requests</span>
+        <span class="fact"><b>0</b> host permissions</span>
+      </div>
+
+      <div class="device" id="device">
+        <iframe id="view-popup" src="./popup-harness.html?band=saturated"></iframe>
+        <iframe id="view-settings" src="./options-harness.html"></iframe>
+        <iframe id="view-file" src="./file-harness.html"></iframe>
+      </div>
+
+      <div class="outro" id="outro">
+        <span class="mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+            <circle cx="10" cy="10" r="6" />
+            <path d="M14.6 14.6 L20 20" stroke-linecap="round" />
+          </svg>
+        </span>
+        <h2>Slop Lens</h2>
+        <p>No network. No telemetry. No account.</p>
+        <p class="repo">github.com/mosajjal/slop-lens</p>
+      </div>
+    </div>
+
+    <script>
+      const SCENES = [
+        {
+          at: 0,
+          view: "popup",
+          size: [384, 600],
+          headline: "Read the page.<br />Then read <em>how</em> it was written.",
+          blurb:
+            "Scores any article for the patterns that give away generated text.",
+        },
+        {
+          at: 4.5,
+          view: "popup",
+          size: [384, 600],
+          headline: "Every signal,<br />and the <em>exact</em> words.",
+          blurb:
+            "Grouped by rule, heaviest first. Click one to jump to it on the page.",
+          open: true,
+        },
+        {
+          at: 9,
+          view: "settings",
+          size: [720, 560],
+          headline: "Your toolbar,<br />your <em>rules</em>.",
+          blurb:
+            "Show the number, colour the icon, or neither. Scan on load only if you ask.",
+        },
+        {
+          at: 13.5,
+          view: "file",
+          size: [760, 620],
+          headline: "Score a PDF,<br />without <em>uploading</em> it.",
+          blurb: "Parsed in the tab. It never leaves your machine.",
+        },
+        { at: 18.5, outro: true },
+      ];
+
+      const DURATION = 22;
+      const FADE = 0.45;
+
+      const WIDE_DEVICE_PX = 500;
+      const COPY_PX = 470;
+      const WIDE_COPY_PX = 330;
+      const HEADLINE_PX = 48;
+      const WIDE_HEADLINE_PX = 38;
+      const MARGIN_PX = 88;
+      const WIDE_MARGIN_PX = 56;
+
+      const views = {
+        popup: document.getElementById("view-popup"),
+        settings: document.getElementById("view-settings"),
+        file: document.getElementById("view-file"),
+      };
+
+      const headline = document.getElementById("headline");
+      const blurb = document.getElementById("blurb");
+      const facts = document.getElementById("facts");
+      const device = document.getElementById("device");
+      const outro = document.getElementById("outro");
+      const copy = document.querySelector(".copy");
+
+      let openedSignals = false;
+
+      const clamp = (value) => Math.min(1, Math.max(0, value));
+      const ease = (value) => value * value * (3 - 2 * value);
+
+      /** Render the exact state at time `t`, with no reliance on the clock. */
+      window.__promoSeek = (t) => {
+        let index = 0;
+        for (let scene = 0; scene < SCENES.length; scene += 1) {
+          if (t >= SCENES[scene].at) {
+            index = scene;
+          }
+        }
+
+        const scene = SCENES[index];
+        const since = t - scene.at;
+
+        // Cross-fade the copy and the device on every scene change.
+        const enter = ease(clamp(since / FADE));
+        const outroActive = Boolean(scene.outro);
+
+        outro.style.opacity = outroActive ? enter : 0;
+
+        if (outroActive) {
+          copy.style.opacity = 0;
+          facts.style.opacity = 0;
+          device.style.opacity = 0;
+          window.__promoDone = t >= DURATION;
+          return;
+        }
+
+        if (headline.dataset.at !== String(scene.at)) {
+          headline.dataset.at = String(scene.at);
+          headline.innerHTML = scene.headline;
+          blurb.textContent = scene.blurb;
+        }
+
+        copy.style.opacity = enter;
+        copy.style.transform = `translateY(${(1 - enter) * 14}px)`;
+        facts.style.opacity = enter * 0.95;
+
+        // A device wider than WIDE_DEVICE_PX would otherwise slide under the
+        // copy column and clip the headline, so the column gives way instead.
+        const [width, height] = scene.size;
+        const wide = width > WIDE_DEVICE_PX;
+
+        copy.style.width = `${wide ? WIDE_COPY_PX : COPY_PX}px`;
+        facts.style.width = `${wide ? WIDE_COPY_PX : COPY_PX}px`;
+        headline.style.fontSize = `${wide ? WIDE_HEADLINE_PX : HEADLINE_PX}px`;
+
+        device.style.right = `${wide ? WIDE_MARGIN_PX : MARGIN_PX}px`;
+        device.style.width = `${width}px`;
+        device.style.height = `${height}px`;
+        device.style.top = `${(800 - height) / 2}px`;
+        device.style.opacity = enter;
+
+        for (const [name, frame] of Object.entries(views)) {
+          frame.style.width = `${width}px`;
+          frame.style.height = `${height}px`;
+          frame.style.opacity = name === scene.view ? 1 : 0;
+        }
+
+        // Expand the first signal groups once, when that scene arrives.
+        if (scene.open && !openedSignals) {
+          openedSignals = true;
+          try {
+            const rules = views.popup.contentDocument.querySelectorAll("details.rule");
+            for (const rule of [...rules].slice(0, 3)) {
+              rule.open = true;
+            }
+          } catch (error) {
+            // The harness has not finished rendering; the next seek retries.
+          }
+        }
+
+        window.__promoDone = t >= DURATION;
+      };
+
+      window.__promoDuration = DURATION;
+      window.__promoSeek(0);
+    </script>
+  </body>
+</html>

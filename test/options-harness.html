@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Slop Lens options harness</title>
+  </head>
+  <body>
+    <script type="module">
+      // Loads the real settings page against an in-memory storage stub, so the
+      // options UI can be exercised without installing the add-on.
+      const html = await (await fetch("../src/options.html")).text();
+      const parsed = new DOMParser().parseFromString(html, "text/html");
+
+      for (const link of parsed.querySelectorAll('link[rel="stylesheet"]')) {
+        const clone = document.createElement("link");
+        clone.rel = "stylesheet";
+        clone.href = `../src/${link.getAttribute("href")}`;
+        document.head.appendChild(clone);
+      }
+
+      for (const style of parsed.querySelectorAll("style")) {
+        document.head.appendChild(style.cloneNode(true));
+      }
+
+      document.body.innerHTML = parsed.body.innerHTML;
+      for (const script of document.body.querySelectorAll("script")) {
+        script.remove();
+      }
+
+      // Relative asset paths in the page assume it lives in src/.
+      for (const img of document.body.querySelectorAll("img")) {
+        img.src = img.getAttribute("src").replace(/^\.\.\//, "../");
+      }
+
+      const store = {};
+      const session = {};
+      const calls = [];
+      const toolbar = {};
+
+      const area = (backing) => ({
+        get: async (key) => (backing[key] === undefined ? {} : { [key]: backing[key] }),
+        set: async (patch) => Object.assign(backing, patch),
+      });
+
+      globalThis.chrome = {
+        storage: { local: area(store), session: area(session) },
+        // Two fake tabs: one previously scanned, one never scanned.
+        tabs: {
+          query: async (q) =>
+            q && q.active ? [{ id: 7 }] : [{ id: 7 }, { id: 9 }],
+        },
+        action: {
+          setIcon: async (a) => {
+            calls.push(`setIcon:${a.tabId}:${a.path[16]}`);
+            toolbar[a.tabId] = Object.assign(toolbar[a.tabId] || {}, { icon: a.path[16] });
+          },
+          setBadgeText: async (a) => {
+            calls.push(`setBadgeText:${a.tabId}:${JSON.stringify(a.text)}`);
+            toolbar[a.tabId] = Object.assign(toolbar[a.tabId] || {}, { badge: a.text });
+          },
+          setBadgeBackgroundColor: async (a) => {
+            toolbar[a.tabId] = Object.assign(toolbar[a.tabId] || {}, { bg: a.color });
+          },
+          setBadgeTextColor: async () => {},
+        },
+      };
+
+      globalThis.__harnessToolbar = toolbar;
+      globalThis.__harnessSession = session;
+
+      globalThis.__harnessStore = store;
+      globalThis.__harnessCalls = calls;
+
+      const bust = Date.now();
+      await import(`../src/settings.js?t=${bust}`);
+      await import(`../src/indicator.js?t=${bust}`);
+      await import(`../src/options.js?t=${bust}`);
+    </script>
+  </body>
+</html>

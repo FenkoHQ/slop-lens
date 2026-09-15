@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Slop Lens store screenshot</title>
+    <link rel="stylesheet" href="../src/popup.css" />
+    <style>
+      /* A 1280x800 stage holding the real popup, for store listing images. */
+      html, body { margin: 0; height: 100%; }
+
+      body {
+        width: 1280px;
+        height: 800px;
+        /* popup.css is imported for its tokens and also sizes the popup body;
+           undo that clamp so the stage is a full 1280x800. */
+        max-height: none;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        align-content: center;
+        gap: 72px;
+        padding: 0 88px;
+        background:
+          radial-gradient(900px 600px at 18% 22%, rgba(245, 166, 35, 0.14), transparent 62%),
+          #0d1117;
+        color: #e6edf3;
+        overflow: hidden;
+      }
+
+      .pitch { max-width: 560px; }
+
+      .pitch h1 {
+        margin: 0 0 18px;
+        font-size: 50px;
+        font-weight: 800;
+        line-height: 1.02;
+        letter-spacing: -0.035em;
+      }
+
+      .pitch h1 em { font-style: normal; color: #f5a623; }
+
+      .pitch p {
+        margin: 0 0 26px;
+        font-size: 19px;
+        line-height: 1.5;
+        color: #9198a1;
+      }
+
+      .facts { display: flex; gap: 10px; flex-wrap: wrap; }
+
+      .fact {
+        padding: 6px 12px;
+        border: 1px solid #30363d;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 500;
+        color: #e6edf3;
+      }
+
+      .fact b { color: #f5a623; font-weight: 700; }
+
+      .device {
+        width: var(--w, 384px);
+        height: var(--h, 600px);
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 40px 90px rgba(0, 0, 0, 0.6), 0 0 0 1px #30363d;
+      }
+
+      .device iframe {
+        width: var(--w, 384px);
+        height: var(--h, 600px);
+        border: 0;
+        display: block;
+      }
+
+      /* Wider views need the copy column to give way. */
+      body.wide { grid-template-columns: 1fr auto; gap: 56px; padding: 0 64px; }
+      body.wide .pitch h1 { font-size: 42px; }
+      body.wide .pitch { max-width: 400px; }
+    </style>
+  </head>
+  <body>
+    <div class="pitch">
+      <h1>Read the page.<br />Then read <em>how</em> it was written.</h1>
+      <p>
+        Scores any article for the patterns that give away generated text, and
+        highlights the passages that caused the score.
+      </p>
+      <div class="facts">
+        <span class="fact"><b>24</b> rules</span>
+        <span class="fact"><b>0</b> network requests</span>
+        <span class="fact"><b>0</b> host permissions</span>
+        <span class="fact">Fully offline</span>
+      </div>
+    </div>
+
+    <div class="device"><iframe id="frame" title="Slop Lens popup"></iframe></div>
+
+    <script>
+      const params = new URLSearchParams(location.search);
+      const band = params.get("band") || "saturated";
+      const page = params.get("page") || "slop";
+      const view = params.get("view") || "popup";
+      const frame = document.getElementById("frame");
+      const device = document.querySelector(".device");
+
+      const VIEWS = {
+        popup: {
+          src: `./popup-harness.html?page=${encodeURIComponent(page)}` +
+            (params.get("band") ? `&band=${encodeURIComponent(band)}` : ""),
+          w: 384,
+          h: 600,
+        },
+        settings: { src: "./options-harness.html", w: 720, h: 560 },
+        file: { src: "./file-harness.html", w: 760, h: 620 },
+      };
+
+      const chosen = VIEWS[view] || VIEWS.popup;
+      const height = Number(params.get("h")) || chosen.h;
+      device.style.setProperty("--w", `${chosen.w}px`);
+      device.style.setProperty("--h", `${height}px`);
+      if (chosen.w > 500) {
+        document.body.classList.add("wide");
+      }
+
+      const headline = params.get("headline");
+      if (headline) {
+        document.querySelector(".pitch h1").innerHTML = headline;
+      }
+      const blurb = params.get("blurb");
+      if (blurb) {
+        document.querySelector(".pitch p").textContent = blurb;
+      }
+
+      frame.src = chosen.src;
+
+      if (params.get("open")) {
+        frame.addEventListener("load", () => {
+          // The harness renders asynchronously; give it a beat, then expand.
+          setTimeout(() => {
+            const groups = frame.contentDocument.querySelectorAll("details.rule");
+            for (const group of [...groups].slice(0, 2)) {
+              group.open = true;
+            }
+          }, 600);
+        });
+      }
+    </script>
+  </body>
+</html>

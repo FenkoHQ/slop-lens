@@ -1,0 +1,5 @@
+# Build output lives beside the project, not in it.
+*.zip
+
+# Captured pages used while diagnosing a site; never committed.
+test/fixtures/

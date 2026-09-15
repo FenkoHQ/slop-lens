@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Slop Lens pre-wrap harness</title>
+    <style>
+      body { font: 15px/1.5 system-ui, sans-serif; max-width: 640px; margin: 2rem auto; }
+      /* How LinkedIn, X and most in-app composers render a post body: one text
+         node, no <br>, no block children, newlines preserved by CSS alone. */
+      .post-body { white-space: pre-wrap; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <article>
+        <p class="post-body">Most AI pilots do not fail because the technology is weak.
+
+They fail because the business case is.
+
+The companies getting it right are focused on three things:
+
+1. Real workflows, not demos
+2. Early governance
+3. Measurable P&L impact
+
+Here is what we keep seeing across every industry we work in. Teams embark on a groundbreaking, comprehensive initiative. They delve into the landscape. Six months later there is a paradigm and no revenue.
+
+The teams that win start smaller. They pick one bottleneck. They measure it before and after. That is the whole method.
+
+At the end of the day, it is not the model that decides, it is the operating discipline around it.</p>
+      </article>
+    </main>
+
+    <script>
+      // Cache-bust during iteration: Chrome will otherwise serve an edited
+      // engine file from memory cache and the change looks like a no-op.
+      const SLOP_LENS_FILES = [
+        "engine/util.js", "engine/markdown.js", "engine/document.js",
+        "engine/ngrams.js", "engine/scoring.js", "engine/rules.js",
+        "engine/engine.js", "extract.js", "content.js",
+      ];
+      const bust = Date.now();
+      for (const file of SLOP_LENS_FILES) {
+        document.write(`<script src="../src/${file}?t=${bust}"><\/script>`);
+      }
+    </script>
+  </body>
+</html>

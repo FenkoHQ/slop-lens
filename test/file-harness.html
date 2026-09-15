@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Slop Lens file harness</title>
+    <style>
+      html, body { margin: 0; height: 100%; }
+      iframe { width: 100%; height: 100%; border: 0; display: block; }
+    </style>
+  </head>
+  <body>
+    <iframe id="frame" src="../src/file.html" title="Slop Lens file scorer"></iframe>
+    <script type="module">
+      // Drives the real file scorer with test/sample.pdf, so the scored state
+      // can be inspected and photographed without a manual drag.
+      const frame = document.getElementById("frame");
+      await new Promise((ready) => frame.addEventListener("load", ready, { once: true }));
+
+      const bytes = await (await fetch("./sample.pdf")).arrayBuffer();
+      const file = new frame.contentWindow.File([bytes], "quarterly-update.pdf", {
+        type: "application/pdf",
+      });
+
+      const transfer = new frame.contentWindow.DataTransfer();
+      transfer.items.add(file);
+      frame.contentDocument.getElementById("drop").dispatchEvent(
+        new frame.contentWindow.DragEvent("drop", {
+          dataTransfer: transfer,
+          bubbles: true,
+          cancelable: true,
+        })
+      );
+    </script>
+  </body>
+</html>

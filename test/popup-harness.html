@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Slop Lens popup harness</title>
+  </head>
+  <body>
+    <script type="module">
+      // Loads the real popup markup and script against a stubbed extension API,
+      // so the rendering path can be exercised without installing the add-on.
+      const html = await (await fetch("../src/popup.html")).text();
+      const parsed = new DOMParser().parseFromString(html, "text/html");
+
+      for (const link of parsed.querySelectorAll('link[rel="stylesheet"]')) {
+        const clone = document.createElement("link");
+        clone.rel = "stylesheet";
+        clone.href = `../src/${link.getAttribute("href")}`;
+        document.head.appendChild(clone);
+      }
+      document.body.innerHTML = parsed.body.innerHTML;
+      document.body.querySelector("script")?.remove();
+
+      // Stubbed tab: the engine runs for real against test/page.html, loaded in
+      // an iframe so the extractor sees a document that actually has layout.
+      const frame = document.createElement("iframe");
+      // ?page=clean swaps in genuinely human prose, so the clean-band shot is
+      // a real reading rather than a slop page with its score overwritten.
+      const PAGES = { slop: "./page.html", clean: "./page-clean.html" };
+      frame.src = PAGES[new URLSearchParams(location.search).get("page")] || PAGES.slop;
+      frame.style.cssText = "position:absolute; left:-9999px; width:900px; height:2000px;";
+      document.body.appendChild(frame);
+      await new Promise((resolve) => frame.addEventListener("load", resolve, { once: true }));
+      const article = frame.contentDocument;
+
+      for (const file of [
+        "../src/engine/util.js", "../src/engine/markdown.js", "../src/engine/document.js",
+        "../src/engine/ngrams.js", "../src/engine/scoring.js", "../src/engine/rules.js",
+        "../src/engine/engine.js", "../src/extract.js", "../src/report.js", "../src/settings.js", "../src/indicator.js",
+      ]) {
+        await import(/* webpackIgnore: true */ `${file}?t=${Date.now()}`);
+      }
+
+      const extracted = globalThis.SlopLens.extract(article);
+      const analysis = globalThis.SlopGuard.analyzeText(extracted.markdown);
+      globalThis.__harnessAnalysis = analysis;
+
+      const calls = [];
+      const indicator = {};
+
+      // `?band=heavy` forces a band so every colour state can be reviewed.
+      const forced = new URLSearchParams(location.search).get("band");
+      const shown = forced
+        ? { ...analysis, band: forced, score: { saturated: 8, heavy: 31, moderate: 52, light: 71, clean: 93 }[forced] }
+        : analysis;
+
+      globalThis.chrome = {
+        tabs: {
+          query: async () => [{ id: 1 }],
+          create: async (a) => calls.push(`create:${a.url}`),
+        },
+        runtime: {
+          getURL: (p) => `../${p.replace(/^src\//, "")}`,
+          openOptionsPage: async () => calls.push("openOptionsPage"),
+        },
+        storage: {
+          local: { get: async () => ({}), set: async () => {} },
+          session: { get: async () => ({}), set: async () => {} },
+        },
+        scripting: {
+          executeScript: async ({ func, args }) => {
+            if (!func) {
+              return [{ result: undefined }];
+            }
+            const [name] = args;
+            calls.push(name);
+            // popup.js asks for scanWhenReady; content.js treats it as scan
+            // plus a retry budget, and both resolve to the same reading.
+            if (name === "scan" || name === "scanWhenReady") {
+              return [{ result: { ok: true, mode: "page", hasSelection: true, selectionWords: 42, highlightable: true, analysis: shown } }];
+            }
+            return [{ result: { painted: 0, ok: true } }];
+          },
+        },
+        action: {
+          setIcon: async (a) => Object.assign(indicator, { icon: a.path[16] }),
+          setBadgeBackgroundColor: async (a) => Object.assign(indicator, { bg: a.color }),
+          setBadgeText: async (a) => Object.assign(indicator, { text: a.text }),
+          setBadgeBackgroundColor: async (a) => Object.assign(indicator, { bg: a.color }),
+          setBadgeTextColor: async (a) => Object.assign(indicator, { fg: a.color }),
+        },
+      };
+      globalThis.__harnessCalls = calls;
+      globalThis.__harnessIndicator = indicator;
+
+      await import(`../src/popup.js?t=${Date.now()}`);
+    </script>
+  </body>
+</html>

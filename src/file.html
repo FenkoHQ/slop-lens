@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Slop Lens: score a file</title>
+    <link rel="stylesheet" href="popup.css" />
+    <style>
+      /* popup.css sizes itself for the 384px popup; this is a full page. */
+      body {
+        width: auto;
+        max-width: none;
+        max-height: none;
+        min-height: 100vh;
+      }
+
+      main {
+        width: 100%;
+        max-width: 720px;
+        margin: 0 auto;
+        padding: var(--space-6) var(--space-4) 64px;
+      }
+
+      .masthead,
+      .colophon {
+        padding-left: max(var(--space-4), calc(50vw - 360px));
+        padding-right: max(var(--space-4), calc(50vw - 360px));
+      }
+
+      .dropzone {
+        display: grid;
+        place-items: center;
+        gap: var(--space-3);
+        padding: 56px var(--space-6);
+        border: 1px dashed var(--border);
+        border-radius: var(--radius-lg);
+        background: var(--bg-elev);
+        text-align: center;
+        transition: border-color var(--ease), background var(--ease);
+      }
+
+      .dropzone.over {
+        border-color: var(--accent);
+        background: var(--accent-soft);
+      }
+
+      .dropzone h2 {
+        margin: 0;
+        font-size: 17px;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        text-transform: none;
+        color: var(--text);
+      }
+
+      .dropzone p {
+        margin: 0;
+        max-width: 44ch;
+        color: var(--text-muted);
+      }
+
+      .pick {
+        padding: 7px 16px;
+        font-size: 13px;
+        font-weight: 600;
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .pick:hover {
+        background: var(--accent);
+        color: var(--bg);
+      }
+
+      .subject {
+        display: flex;
+        align-items: baseline;
+        gap: var(--space-2);
+        margin-bottom: var(--space-4);
+      }
+
+      .subject .name {
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .subject button {
+        margin-left: auto;
+        flex: none;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="masthead">
+      <span class="mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+          <circle cx="10" cy="10" r="6" />
+          <path d="M14.6 14.6 L20 20" stroke-linecap="round" />
+        </svg>
+      </span>
+      <h1>Slop Lens</h1>
+    </header>
+
+    <main id="view">
+      <div class="dropzone" id="drop">
+        <h2>Score a PDF or text file</h2>
+        <p>
+          Drop it here, or pick one. The file is parsed in this tab and never
+          leaves your machine.
+        </p>
+        <button type="button" class="pick" id="pick">Choose file</button>
+      </div>
+    </main>
+
+    <input
+      type="file"
+      id="file"
+      accept=".pdf,.txt,.md,.markdown,.text,application/pdf,text/plain,text/markdown"
+      hidden
+    />
+
+    <footer class="colophon">
+      <span>slop-guard 0.5.0 rules, ported to JS. PDF text via pdf.js.</span>
+    </footer>
+
+    <script src="engine/util.js"></script>
+    <script src="engine/markdown.js"></script>
+    <script src="engine/document.js"></script>
+    <script src="engine/ngrams.js"></script>
+    <script src="engine/scoring.js"></script>
+    <script src="engine/rules.js"></script>
+    <script src="engine/engine.js"></script>
+    <script src="report.js"></script>
+    <script src="readfile.js"></script>
+    <script src="file.js"></script>
+  </body>
+</html>

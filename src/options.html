@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Slop Lens settings</title>
+    <link rel="stylesheet" href="popup.css" />
+    <style>
+      /* popup.css sizes itself for the 384px popup; this is a full page. */
+      body {
+        width: auto;
+        max-width: none;
+        max-height: none;
+        min-height: 100vh;
+      }
+
+      main {
+        width: 100%;
+        max-width: 620px;
+        margin: 0 auto;
+        padding: var(--space-6) var(--space-4) 64px;
+      }
+
+      .masthead,
+      .colophon {
+        padding-left: max(var(--space-4), calc(50vw - 310px));
+        padding-right: max(var(--space-4), calc(50vw - 310px));
+      }
+
+      .option {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--space-4);
+        padding: var(--space-4) 0;
+        border-bottom: 1px solid var(--border-soft);
+      }
+
+      .option:first-of-type {
+        border-top: 1px solid var(--border-soft);
+      }
+
+      .option .switch {
+        margin-left: auto;
+        margin-top: 2px;
+      }
+
+      .option h3 {
+        margin: 0 0 2px;
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .option p {
+        margin: 0;
+        max-width: 46ch;
+        color: var(--text-muted);
+      }
+
+      .preview {
+        display: flex;
+        align-items: center;
+        gap: var(--space-4);
+        margin: var(--space-6) 0 0;
+        padding: var(--space-4);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        background: var(--bg-elev);
+      }
+
+      .preview-label {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--text-subtle);
+      }
+
+      .toolbar {
+        display: flex;
+        align-items: center;
+        gap: var(--space-3);
+        margin-left: auto;
+      }
+
+      .button-preview {
+        position: relative;
+        width: 32px;
+        height: 32px;
+      }
+
+      .button-preview img {
+        width: 32px;
+        height: 32px;
+        display: block;
+      }
+
+      .badge-preview {
+        position: absolute;
+        right: -3px;
+        bottom: -2px;
+        min-width: 17px;
+        padding: 0 3px;
+        border-radius: 3px;
+        font-size: 9px;
+        font-weight: 700;
+        line-height: 12px;
+        text-align: center;
+        color: #0d1117;
+      }
+
+      .badge-preview[hidden] {
+        display: none;
+      }
+
+      .welcome {
+        margin: 0 0 var(--space-6);
+        padding: var(--space-4);
+        border: 1px solid var(--accent);
+        border-radius: var(--radius-md);
+        background: var(--accent-soft);
+      }
+
+      .welcome h3 {
+        margin: 0 0 var(--space-2);
+        font-size: 14px;
+        font-weight: 600;
+      }
+
+      .welcome p {
+        margin: 0 0 var(--space-3);
+        max-width: 56ch;
+        color: var(--text-muted);
+      }
+
+      .welcome-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+      }
+
+      button.primary {
+        border-color: var(--accent);
+        background: var(--accent);
+        color: var(--bg);
+        font-weight: 600;
+      }
+
+      button.primary:hover {
+        border-color: var(--accent-hover);
+        background: var(--accent-hover);
+        color: var(--bg);
+      }
+
+      .saved {
+        margin: var(--space-4) 0 0;
+        font-size: 12px;
+        color: var(--band-clean);
+        opacity: 0;
+        transition: opacity var(--ease);
+      }
+
+      .saved.on {
+        opacity: 1;
+      }
+
+      .saved.bad {
+        color: var(--band-saturated);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="masthead">
+      <span class="mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4">
+          <circle cx="10" cy="10" r="6" />
+          <path d="M14.6 14.6 L20 20" stroke-linecap="round" />
+        </svg>
+      </span>
+      <h1>Slop Lens settings</h1>
+    </header>
+
+    <main>
+      <section class="welcome" id="welcome" hidden>
+        <h3>Show a slop reading on every page</h3>
+        <p>
+          Slop Lens can score each page as it loads, so the toolbar shows the
+          reading without a click. That needs permission to read the pages you
+          visit. Scoring stays on this device; nothing is sent anywhere.
+        </p>
+        <div class="welcome-actions">
+          <button type="button" class="primary" id="welcome-on">Turn on</button>
+          <button type="button" id="welcome-skip">Not now</button>
+        </div>
+      </section>
+
+      <h2>Toolbar</h2>
+
+      <div class="option">
+        <div>
+          <h3>Show the slop number</h3>
+          <p>
+            Puts the reading on the toolbar badge, the way uBlock Origin shows
+            its count. The badge takes the band colour.
+          </p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="badge" />
+          <span class="track"><span class="knob"></span></span>
+        </label>
+      </div>
+
+      <div class="option">
+        <div>
+          <h3>Tint the icon by band</h3>
+          <p>
+            Colours the toolbar icon from green through to red as the slop
+            reading climbs. Turn this off to keep the plain amber icon.
+          </p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="tintIcon" />
+          <span class="track"><span class="knob"></span></span>
+        </label>
+      </div>
+
+      <div class="preview">
+        <div>
+          <p class="preview-label">Preview</p>
+          <p class="blurb" id="preview-note">A page reading 69, heavy.</p>
+        </div>
+        <div class="toolbar">
+          <span class="button-preview">
+            <img id="preview-icon" src="../icons/band/heavy-32.png" alt="" />
+            <span class="badge-preview" id="preview-badge">69</span>
+          </span>
+          <button type="button" id="try-it">Try it on this tab</button>
+        </div>
+      </div>
+
+      <h2>Scanning</h2>
+
+      <div class="option">
+        <div>
+          <h3>Scan pages automatically</h3>
+          <p>
+            Scores every page as it finishes loading, so the toolbar is already
+            coloured before you click. This needs permission to read the pages
+            you visit, which the extension does not otherwise hold: without it
+            it can only read a page when you click the icon. Nothing is sent
+            anywhere either way.
+          </p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="autoScan" />
+          <span class="track"><span class="knob"></span></span>
+        </label>
+      </div>
+
+      <p class="saved" id="saved">Saved. Applies on the next scan.</p>
+    </main>
+
+    <footer class="colophon">
+      <span>Settings are stored on this device only, never synced.</span>
+    </footer>
+
+    <script src="settings.js"></script>
+    <script src="indicator.js"></script>
+    <script src="options.js"></script>
+  </body>
+</html>

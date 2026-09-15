@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Slop Lens clean harness page</title>
+    <style>
+      body { font: 16px/1.6 Georgia, serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+      nav, footer { color: #888; font-size: 13px; }
+    </style>
+  </head>
+  <body>
+    <nav>Home &middot; Blog &middot; About</nav>
+
+    <article>
+      <h1>Splitting the nightly build</h1>
+
+      <p>We moved the nightly build off the shared runner in March. The old setup ran on a single box with 8 cores, and by then four teams were queuing on it. A build that took 11 minutes in January took 40 by the end of February.</p>
+
+      <p>The first thing we tried was giving the runner more cores. That helped for about three weeks. Queue time dropped, then crept back as the Android team added their integration suite. Adding hardware moved the bottleneck without removing it.</p>
+
+      <p>So we split the work instead. Each repository now gets its own ephemeral runner, spun up from a base image that already has the toolchain baked in. Startup costs us 45 seconds. We pay that once per build rather than waiting behind someone else&#x27;s test run.</p>
+
+      <p>The base image is rebuilt every Sunday. If a dependency changes mid-week, the build installs it at runtime and logs a warning, which tells us the image is drifting. Last month there were 14 such warnings, all from the same Python package that pins its own transitive dependencies loosely.</p>
+
+      <p>Costs went up by roughly 20 percent. We decided that was acceptable because the old queue was costing engineers more in waiting than the machines cost in dollars. That trade will not hold if the team doubles, and we will revisit it when it does.</p>
+
+      <p>One thing did not work. We tried caching the test database between runs to save the 90 second seed step. Two builds in a row picked up rows that a previous run had written, and a flaky test started failing in a way nobody could reproduce locally. We reverted the cache and kept the seed step.</p>
+
+      <p>If you are looking at the same problem, measure queue time separately from build time first. We spent two weeks optimising the build itself before noticing that most of the wall clock was spent waiting to start.</p>
+    </article>
+
+    <footer>Posted to the infra blog.</footer>
+  </body>
+</html>

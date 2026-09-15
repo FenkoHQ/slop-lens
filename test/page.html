@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Slop Lens browser harness</title>
+    <style>
+      body { font: 16px/1.6 Georgia, serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+      nav, footer { color: #888; font-size: 13px; }
+      pre { background: #f4f4f2; padding: 12px; overflow-x: auto; }
+      .hidden-thing { display: none; }
+    </style>
+  </head>
+  <body>
+    <nav>Home · Blog · About · Subscribe to our newsletter</nav>
+
+    <article>
+      <h1>Unlocking the Future of Developer Productivity</h1>
+
+      <p>
+        In today's fast-paced landscape, it's worth noting that teams must delve into a
+        holistic paradigm. This is not just about tooling, but also about culture.
+        Let's dive in.
+      </p>
+
+      <p><strong>Problem:</strong> Deployment is slow and painful for everyone involved.</p>
+      <p><strong>Cause:</strong> The pipeline is a tapestry of legacy scripts and manual gates.</p>
+      <p><strong>Solution:</strong> We leverage a robust, comprehensive, and innovative framework.</p>
+
+      <ul>
+        <li><strong>Reliability</strong> improves across the board</li>
+        <li><strong>Scalability</strong> unlocks new growth</li>
+        <li><strong>Security</strong> becomes foundational</li>
+        <li><strong>Observability</strong> is paramount</li>
+        <li><strong>Velocity</strong> is transformed</li>
+        <li><strong>Culture</strong> shifts profoundly</li>
+      </ul>
+
+      <p>
+        Significantly, this is where things get interesting. Many believe the journey
+        matters more than the destination — and studies show that teams who embrace this
+        mindset thrive. We need to <strong>carefully consider</strong> the tradeoffs.
+      </p>
+
+      <hr />
+
+      <blockquote>
+        <p>Great engineering is not about speed.</p>
+        <p>It is about trust.</p>
+        <p>Trust is earned through consistency.</p>
+      </blockquote>
+
+      <pre><code class="language-python">delve = True  # crucial: a groundbreaking paradigm
+print("landscape")</code></pre>
+
+      <p>The <code>leverage</code> helper wraps <code>os.write</code> and nothing else.</p>
+
+      <table>
+        <tr><th>Region</th><th>P95</th></tr>
+        <tr><td>us-east</td><td>120ms</td></tr>
+        <tr><td>eu-west</td><td>140ms</td></tr>
+      </table>
+
+      <p class="hidden-thing">Hidden crucial groundbreaking paradigm text that must not count.</p>
+
+      <p>Ultimately, it is our choices that define the systems we build.</p>
+    </article>
+
+    <footer>© Example Corp · Privacy · Terms</footer>
+
+    <script>
+      // Cache-bust during iteration: Chrome will otherwise serve an edited
+      // engine file from memory cache and the change looks like a no-op.
+      const SLOP_LENS_FILES = [
+        "engine/util.js", "engine/markdown.js", "engine/document.js",
+        "engine/ngrams.js", "engine/scoring.js", "engine/rules.js",
+        "engine/engine.js", "extract.js", "content.js",
+      ];
+      const bust = Date.now();
+      for (const file of SLOP_LENS_FILES) {
+        document.write(`<script src="../src/${file}?t=${bust}"><\/script>`);
+      }
+    </script>
+  </body>
+</html>
