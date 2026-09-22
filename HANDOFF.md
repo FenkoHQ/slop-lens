@@ -37,9 +37,10 @@ releases only. The extension now links to `https://fenko.nz/slop-lens/`, uses
 Fenko attribution, and shares a device-local System/Light/Dark preference
 across its pages. The lens icon and scoring rules are unchanged.
 
-Website work is in the `feat/slop-lens` branch of the Fenko website repository.
-The page belongs in the footer free-tools list. Describe scores as writing
-patterns, never proof of AI authorship or provenance.
+The website page and footer link are live from commit `a838b19`. GitHub release
+`v0.0.2` ships extension commit `0551b70`; its downloaded ZIP matched the local
+build. `PUBLISHING.md` contains listing copy, release steps and store-readiness
+gaps. Describe scores as writing patterns, never proof of AI authorship.
 
 The privacy policy documents optional site access, local preferences, session
 readings and external links. Lack of required host permissions is not a
