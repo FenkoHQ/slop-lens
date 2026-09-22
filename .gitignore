@@ -3,3 +3,6 @@
 
 # Captured pages used while diagnosing a site; never committed.
 test/fixtures/
+
+# Local publishing and maintenance notes.
+/private/
