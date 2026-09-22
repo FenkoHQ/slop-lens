@@ -58,8 +58,12 @@ Bands, in slop: 0–20 clean · 21–40 light · 41–60 moderate · 61–80 hea
 
 ## Install
 
-Free and open source, MIT. Not published on any browser store; every build is
-on the [releases page](https://github.com/FenkoHQ/slop-lens/releases).
+Free and open source, MIT.
+
+[Chrome Web Store](https://chromewebstore.google.com/detail/slop-lens/mcnjjendjmakiioflhhjijdnffiejiih) ·
+[GitHub releases](https://github.com/FenkoHQ/slop-lens/releases)
+
+### Manual installation
 
 Download `slop-lens-<version>.zip` from the latest release and unzip it.
 
@@ -71,7 +75,7 @@ Download `slop-lens-<version>.zip` from the latest release and unzip it.
 release Firefox removes it on restart. Developer Edition, Nightly and ESR keep
 it if `xpinstall.signatures.required` is `false` in `about:config`.
 
-Nothing updates itself. Repeat with the new zip to upgrade.
+Manual installations do not update themselves. Repeat with the new ZIP to upgrade.
 
 Check a download against `SHA256SUMS` in the same release. `package.py` is
 reproducible, so the zip hash also matches a local build of the tagged commit.
