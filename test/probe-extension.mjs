@@ -470,6 +470,20 @@ async function probeAutoScan(checks) {
     filter: (source) => !/\/(test|tools|store)$/.test(source),
   });
 
+  // Make the slow-rule fixture independent of runner speed. The host, worker
+  // termination, messages and popup are the real extension implementation.
+  const scorerPath = join(copy, "src/scan-worker.js");
+  writeFileSync(scorerPath, readFileSync(scorerPath, "utf8") + `
+    const originalScore = onmessage;
+    onmessage = event => {
+      if (event.data.length > 80000) {
+        const stop = Date.now() + 4000;
+        while (Date.now() < stop) {}
+      }
+      originalScore(event);
+    };
+  `);
+
   const manifestPath = join(copy, "manifest.json");
   const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
   manifest.host_permissions = manifest.optional_host_permissions;

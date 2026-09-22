@@ -11,7 +11,14 @@ const vm = require('node:vm');
 global.importScripts = (...paths) => paths.forEach(path => vm.runInThisContext(fs.readFileSync('src/' + path, 'utf8')));
 global.postMessage = value => parentPort.postMessage(value);
 vm.runInThisContext(fs.readFileSync('src/scan-worker.js', 'utf8'));
-parentPort.on('message', data => global.onmessage({ data }));
+parentPort.on('message', data => {
+  // Force a slow rule regardless of the CI runner's CPU speed.
+  if (data.length > 80000) {
+    const stop = Date.now() + 4000;
+    while (Date.now() < stop) {}
+  }
+  global.onmessage({ data });
+});
 `;
 let live = 0;
 class BrowserWorker {

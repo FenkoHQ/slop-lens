@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Slop Lens",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Find formulaic writing patterns in pages and PDFs. Scores locally in your browser, with no uploads or telemetry. A free Fenko tool.",
   "author": "Fenko Security",
   "homepage_url": "https://fenko.nz/slop-lens/",
