@@ -1,6 +1,6 @@
 # Handoff
 
-Paused 2026-09-13. On 2026-09-15 the repo moved to
+On 2026-09-15 the repo moved to
 `github.com/FenkoHQ/slop-lens` (public) and distribution was set to GitHub
 releases only: no Chrome Web Store, no AMO listing.
 
@@ -20,64 +20,33 @@ Feature complete and tested. Nothing is half-finished in the code.
 ```
 ./test/verify.sh
 # 19 samples checked, 0 mismatches     engine parity against Python slop-guard
-# 18 checks, 0 failures                real unpacked extension over CDP
+# 27 checks, 0 failures                real unpacked extension over CDP
 
-python3 tools/package.py
-# slop-lens-0.0.1.zip, 57 files, 645 KB, reproducible sha256
+uv run --no-project tools/package.py
+# slop-lens-0.0.2.zip, reproducible sha256
 ```
 
 Store assets are committed: five 1280x800 screenshots plus `promo.mp4` and
 `promo.gif` in `store/`, all rendered from the real UI by
 `node tools/capture.mjs`.
 
-## Decision taken, not yet acted on
+## Fenko free-tool integration, 22 September 2026
 
-**Slop Lens moves to Fenko as a free tool.** Agreed 2026-09-13, deferred.
+The repository is already public under FenkoHQ. Distribution remains GitHub
+releases only. The extension now links to `https://fenko.nz/slop-lens/`, uses
+Fenko attribution, and shares a device-local System/Light/Dark preference
+across its pages. The lens icon and scoring rules are unchanged.
 
-It fits the existing free-tools set (Fox Generator, Passkey Town, Age Encrypt,
-Fenko Vault) on all three traits they share: runs client-side with nothing
-uploaded, open source, privacy as the pitch rather than a footnote. It has the
-strongest version of the third, because zero host permissions and no
-networking primitive in `src/` make the claim structural rather than a policy.
+Website work is in the `feat/slop-lens` branch of the Fenko website repository.
+The page belongs in the footer free-tools list. Describe scores as writing
+patterns, never proof of AI authorship or provenance.
 
-Three conditions attached to the move:
+The privacy policy documents optional site access, local preferences, session
+readings and external links. Lack of required host permissions is not a
+network isolation guarantee.
 
-1. Footer free tool with a page, the way Age Encrypt is done. Not a product,
-   and not competing with Foxhound or RiskyPlugins for attention.
-2. Repo moves to the FenkoHQ org, matching Fenko Vault. The current
-   combination of a personal repo and a `fenko.nz` extension id is the one
-   arrangement that makes no sense.
-3. Framed as provenance, never as authorship detection. It measures style
-   tells, which correlate with generated text; that is suggestive for triage,
-   not evidence. `CLAIMS.md` in `fenko-www` forbids untraceable claims, and
-   this tool's refusal to accuse anyone is the part worth keeping.
-
-Open question nobody has answered: Fenko attribution means Fenko maintenance.
-This tracks slop-guard 0.5.0 upstream, which can move without warning, and a
-stale rule set ages worse on a company page than on a personal one.
-
-The concrete first step agreed was: set `homepage_url` to
-`https://fenko.nz/slop-lens` and draft `content/english/slop-lens.md` against
-the Age Encrypt layout, for review before anything actually moves.
-
-## Distribution
-
-Decided 2026-09-15: free and open source, never on a store, not signed.
-Tagged releases ship one unsigned zip, loaded unpacked in Chrome or as a
-temporary add-on in Firefox. README "Releasing" has the steps. Mozilla
-unlisted signing (needs AMO API keys) was set up and then stripped as not
-worth it for now.
-
-- Firefox add-on id is `{411dc062-62b1-4928-9713-6f0a2fc383de}`. A GUID
-  rather than `name@domain`, so no email-shaped identifier ships. Becomes
-  permanent if it is ever signed.
-- `strict_min_version` is 128: `optional_host_permissions` does not exist
-  before that, and auto-scan depends on it.
-- No release published yet.
-- **Firefox runtime is still untested.** `web-ext lint --self-hosted` passes
-  with only expected warnings, but every browser check in `verify.sh` drives
-  Chromium. The MV3 dual declaration (`service_worker` plus `scripts`) has
-  never run under Gecko.
+Firefox remains outside the automated browser suite. Do not treat a Chromium
+pass as Firefox verification. The release ZIP excludes development files.
 
 ## Things that will bite whoever picks this up
 

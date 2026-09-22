@@ -244,6 +244,60 @@ async function main() {
       throw new Error("extension did not load; cannot probe");
     }
 
+    // Exercise the actual storage API and CSS on extension-owned pages.
+    await client.send("Page.bringToFront");
+    await client.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: "dark" }] });
+    const theme = await evaluate(client, `(async () => {
+      const select = document.getElementById("theme");
+      for (let n = 0; (select.disabled || document.documentElement.dataset.theme !== "dark") && n < 40; n++) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      const initial = document.documentElement.dataset.theme;
+      select.value = "light";
+      select.dispatchEvent(new Event("change"));
+      await new Promise(resolve => setTimeout(resolve, 100));
+      return { initial, stored: (await chrome.storage.local.get("ui_theme")).ui_theme,
+        background: getComputedStyle(document.body).backgroundColor };
+    })()`);
+    checks.push(["theme: system follows the browser", theme?.initial === "dark"]);
+    checks.push(["theme: selector saves locally and overrides the browser", theme?.stored === "light" && theme?.background === "rgb(255, 255, 255)"]);
+
+    for (const name of ["file", "popup"]) {
+      const response = await fetch(`http://127.0.0.1:${port}/json/new?chrome-extension://${id}/src/${name}.html`, { method: "PUT" });
+      const page = connect((await response.json()).webSocketDebuggerUrl);
+      await page.ready;
+      await page.send("Runtime.enable");
+      await page.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: "dark" }] });
+      await new Promise(resolve => setTimeout(resolve, 250));
+      const savedTheme = await evaluate(page, `document.documentElement.dataset.theme`);
+      checks.push([`theme: ${name} restores the saved preference`, savedTheme === "light"]);
+      await evaluate(client, `chrome.storage.local.set({ ui_theme: "dark" })`);
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const synced = await evaluate(page, `getComputedStyle(document.body).backgroundColor`);
+      checks.push([`theme: ${name} follows changes from settings`, synced === "rgb(13, 17, 23)"]);
+      await page.send("Page.captureScreenshot", { format: "png" }).then(result => {
+        writeFileSync(`/tmp/slop-lens-${name}-dark.png`, Buffer.from(result.data, "base64"));
+      });
+      await evaluate(client, `chrome.storage.local.set({ ui_theme: "light" })`);
+      page.close();
+    }
+    await client.send("Page.captureScreenshot", { format: "png" }).then(result => {
+      writeFileSync("/tmp/slop-lens-options-light.png", Buffer.from(result.data, "base64"));
+    });
+    await client.send("Page.bringToFront");
+    await evaluate(client, `chrome.storage.local.set({ ui_theme: "system" })`);
+    await client.send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-color-scheme", value: "light" }] });
+    await new Promise(resolve => setTimeout(resolve, 100));
+    checks.push(["theme: system follows later device changes", await evaluate(client, `(async () => {
+      for (let n = 0; n < 40; n++) {
+        if (document.documentElement.dataset.theme === "light") {
+          return true;
+        }
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      return { theme: document.documentElement.dataset.theme, matches: matchMedia("(prefers-color-scheme: dark)").matches };
+    })()`) === true]);
+
     // The experiment: does a path relative to the calling page resolve?
     const relative = await evaluate(
       client,

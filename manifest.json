@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
   "name": "Slop Lens",
-  "version": "0.0.1",
-  "description": "Score any page or PDF for AI-slop writing patterns. Runs entirely offline, with no network permissions and no telemetry.",
-  "author": "Ali",
-  "homepage_url": "https://github.com/FenkoHQ/slop-lens",
+  "version": "0.0.2",
+  "description": "Find formulaic writing patterns in pages and PDFs. Scores locally in your browser, with no uploads or telemetry. A free Fenko tool.",
+  "author": "Fenko Security",
+  "homepage_url": "https://fenko.nz/slop-lens/",
   "permissions": [
     "activeTab",
     "scripting",

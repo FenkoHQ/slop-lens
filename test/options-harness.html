@@ -43,7 +43,7 @@
       });
 
       globalThis.chrome = {
-        storage: { local: area(store), session: area(session) },
+        storage: { local: area(store), session: area(session), onChanged: { addListener() {} } },
         // Two fake tabs: one previously scanned, one never scanned.
         tabs: {
           query: async (q) =>
@@ -72,6 +72,7 @@
       globalThis.__harnessCalls = calls;
 
       const bust = Date.now();
+      await import(`../src/theme.js?t=${bust}`);
       await import(`../src/settings.js?t=${bust}`);
       await import(`../src/indicator.js?t=${bust}`);
       await import(`../src/options.js?t=${bust}`);

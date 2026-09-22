@@ -1,70 +1,52 @@
 # Privacy policy
 
-**Slop Lens collects nothing, stores nothing, and sends nothing.**
+Slop Lens is a free, open-source Fenko Security extension. It scores text on
+your device. It has no analytics, telemetry, accounts or scoring service.
 
-## What the extension does with page content
+## Page content and files
 
-When you click the toolbar icon, Slop Lens reads the text of the page in that
-tab, scores it in memory, shows you the result, and forgets it. Nothing is
-written to disk and nothing leaves the browser.
+Clicking the toolbar icon reads the current page or your selection. Optional
+auto-scan reads pages as they load, after you grant site access. Analysis runs
+in the browser; page content, URLs and results are not uploaded.
 
-## What the extension does with files you give it
+PDF, text and Markdown files you choose are read in the file-scoring tab.
+PDF parsing uses bundled pdf.js. Files are not uploaded or saved by the
+extension. Closing the tab discards its file and analysis.
 
-Files picked or dropped on the "Score a file" page are read in that tab,
-scored, and discarded when the tab closes. They are not uploaded, copied or
-stored. PDF parsing uses a bundled copy of pdf.js configured so that it makes
-no network requests of its own.
+## Local storage
 
-## Data collected
+Theme, toolbar and auto-scan preferences use `storage.local`. They stay on
+this device and are not synced through your browser account.
 
-None. Specifically:
+The last band and score for each scanned tab use `storage.session`, keyed by
+tab ID. This holds no page text or URLs and is cleared when the browser
+session ends. Browsers without session storage do not retain those readings.
 
-- No analytics, telemetry, crash reporting or usage metrics.
-- No accounts, logins or identifiers.
-- No cookies or `localStorage`.
-- No synced data. The two toolbar display preferences are kept in
-  `storage.local`, which stays on the device; `storage.sync` is deliberately
-  not used.
-- The band and number last shown for a tab are held in `storage.session`, so
-  that changing a setting can update tabs immediately. That area lives in
-  memory, is never written to disk, and is discarded when the browser closes.
-  It holds a band name and a number, never page content or URLs.
-- No page content, URLs, titles or scores transmitted anywhere.
-- No data sold, shared or disclosed to any third party, because none is
-  collected in the first place.
+## Permissions
 
-## How that is enforced, not just promised
-
-The extension requests **no host permissions**. Under Manifest V3 that means
-it has no ability to make network requests to any site, and no ability to read
-any page until you explicitly invoke it on that tab with the toolbar button.
-
-The source contains no networking code at all. You can check:
-
-```
-grep -rE "fetch\(|XMLHttpRequest|WebSocket|sendBeacon|https?://" src/
-```
-
-That returns nothing but an SVG namespace declaration. Every asset, including
-the typeface, is bundled in the package.
-
-## Permissions and why each is needed
-
-| Permission | Why |
+| Permission | Purpose |
 | --- | --- |
-| `activeTab` | Grants temporary read access to the one tab you invoke the extension on, and only for that invocation. This is what lets it see the article text to score. |
-| `scripting` | Injects the analyzer into that tab so scoring runs locally in the page rather than on a server. |
-| `<all_urls>` (optional) | Only requested if you turn on **Scan pages automatically**, and released when you turn it off. Lets a page be scored as it loads rather than on a click. |
-| `storage` | Remembers three display preferences: whether the toolbar shows the slop number, and whether the icon is tinted. Device-local only. |
+| `activeTab` | Access the tab when you invoke the extension. |
+| `scripting` | Run the local analyzer in that tab. |
+| `storage` | Save device-local preferences and temporary readings. |
+| `<all_urls>` (optional) | Read pages for auto-scan. Requested when enabled; the extension requests removal when disabled. |
 
-There is no `host_permissions` entry, so the extension has no standing access
-to any site and cannot act on pages you have not asked it about.
+There are no required host permissions. Auto-scan is off on installation.
+Browser restrictions still prevent scanning protected pages.
 
-## Changes
+## Network activity
 
-Any future version that collects data would require new permissions and a
-visible update prompt. This policy will be updated before any such release.
+The analyzer has no network calls. Fonts, rules and PDF parsing code ship
+inside the extension. This is an implementation property, not a guarantee
+that browser permissions prohibit every possible network request.
 
-## Contact
+Fenko, privacy, source and support links open external websites only when
+clicked. Those visits are subject to the destination site's privacy policy.
+They do not send the page being scored or its results.
 
-Raise an issue on the project repository.
+## Changes and contact
+
+Policy changes will be recorded here alongside the source. Browser permission
+prompts alone do not guarantee notice of every possible data-handling change.
+
+Report issues at [FenkoHQ/slop-lens](https://github.com/FenkoHQ/slop-lens/issues).

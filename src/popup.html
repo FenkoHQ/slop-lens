@@ -2,6 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Slop Lens</title>
     <link rel="stylesheet" href="popup.css" />
   </head>
@@ -14,6 +15,7 @@
         </svg>
       </span>
       <h1>Slop Lens</h1>
+      <a class="fenko-brand" href="https://fenko.nz/slop-lens/" target="_blank" rel="noopener noreferrer">by Fenko</a>
       <button
         type="button"
         id="open-settings"
@@ -29,15 +31,18 @@
       </button>
     </header>
 
-    <main id="view">
+    <main id="view" aria-live="polite">
       <p class="status" id="status">Reading page…</p>
     </main>
 
+    <p class="scope-note">Writing patterns, not proof of AI authorship.</p>
+
     <footer class="colophon">
-      <span>slop-guard 0.5.0 rules, ported to JS</span>
+      <a href="https://fenko.nz/slop-lens/#privacy" target="_blank" rel="noopener noreferrer">Offline · No uploads</a>
       <button type="button" id="score-file" class="link">Score a file</button>
     </footer>
 
+    <script src="theme.js"></script>
     <script src="settings.js"></script>
     <script src="indicator.js"></script>
     <script src="report.js"></script>

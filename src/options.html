@@ -2,6 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Slop Lens settings</title>
     <link rel="stylesheet" href="popup.css" />
     <style>
@@ -140,14 +141,14 @@
       button.primary {
         border-color: var(--accent);
         background: var(--accent);
-        color: var(--bg);
+        color: var(--text-on-accent);
         font-weight: 600;
       }
 
       button.primary:hover {
         border-color: var(--accent-hover);
         background: var(--accent-hover);
-        color: var(--bg);
+        color: var(--text-on-accent);
       }
 
       .saved {
@@ -176,6 +177,7 @@
         </svg>
       </span>
       <h1>Slop Lens settings</h1>
+      <a class="fenko-brand" href="https://fenko.nz/slop-lens/" target="_blank" rel="noopener noreferrer">by Fenko</a>
     </header>
 
     <main>
@@ -192,6 +194,20 @@
         </div>
       </section>
 
+      <h2>Appearance</h2>
+      <div class="option">
+        <div>
+          <h3><label for="theme">Theme</label></h3>
+          <p>Use your device setting, or choose light or dark.</p>
+        </div>
+        <select id="theme" disabled>
+          <option value="system">System</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </div>
+      <p class="theme-status" id="theme-status" role="status"></p>
+
       <h2>Toolbar</h2>
 
       <div class="option">
@@ -203,7 +219,7 @@
           </p>
         </div>
         <label class="switch">
-          <input type="checkbox" id="badge" />
+          <input type="checkbox" id="badge" aria-label="Show the slop number" />
           <span class="track"><span class="knob"></span></span>
         </label>
       </div>
@@ -217,7 +233,7 @@
           </p>
         </div>
         <label class="switch">
-          <input type="checkbox" id="tintIcon" />
+          <input type="checkbox" id="tintIcon" aria-label="Tint the icon by band" />
           <span class="track"><span class="knob"></span></span>
         </label>
       </div>
@@ -250,18 +266,20 @@
           </p>
         </div>
         <label class="switch">
-          <input type="checkbox" id="autoScan" />
+          <input type="checkbox" id="autoScan" aria-label="Scan pages automatically" />
           <span class="track"><span class="knob"></span></span>
         </label>
       </div>
 
-      <p class="saved" id="saved">Saved. Applies on the next scan.</p>
+      <p class="saved" id="saved" role="status">Saved. Applies on the next scan.</p>
     </main>
 
     <footer class="colophon">
       <span>Settings are stored on this device only, never synced.</span>
+      <nav aria-label="Help"><a href="https://fenko.nz/slop-lens/#privacy" target="_blank" rel="noopener noreferrer">Privacy</a> · <a href="https://github.com/FenkoHQ/slop-lens/issues" target="_blank" rel="noopener noreferrer">Support</a></nav>
     </footer>
 
+    <script src="theme.js"></script>
     <script src="settings.js"></script>
     <script src="indicator.js"></script>
     <script src="options.js"></script>

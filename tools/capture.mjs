@@ -35,7 +35,7 @@ const SHOTS = [
     name: "screenshot-3-clean.png",
     query:
       "page=clean&h=430" +
-      "&headline=Human writing%3Cbr%3Ereads as %3Cem%3Eclean%3C/em%3E." +
+      "&headline=Fewer patterns.%3Cbr%3EA %3Cem%3Elower%3C/em%3E score." +
       "&blurb=The score is a density of tells per thousand words, not a guess about the author.",
     settle: 1800,
   },

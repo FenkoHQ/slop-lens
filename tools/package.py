@@ -15,7 +15,8 @@ import sys
 import zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-SKIP_DIRS = {"test", "tools", "store", ".git", ".github"}
+RUNTIME_DIRS = {"src", "fonts", "icons", "vendor"}
+PUBLIC_FILES = {"manifest.json", "LICENSE", "PRIVACY.md", "README.md"}
 SKIP_NAMES = {".DS_Store"}
 
 # Zip entries need a fixed mtime to stay reproducible; 1980-01-01 is the
@@ -32,6 +33,7 @@ REQUIRED = (
     "src/extract.js",
     "src/report.js",
     "src/settings.js",
+    "src/theme.js",
     "src/indicator.js",
     "src/options.html",
     "src/options.js",
@@ -52,7 +54,9 @@ def shipped_files():
             continue
 
         relative = path.relative_to(ROOT)
-        if relative.parts[0] in SKIP_DIRS or path.name in SKIP_NAMES:
+        if relative.parts[0] not in RUNTIME_DIRS and relative.as_posix() not in PUBLIC_FILES:
+            continue
+        if path.name in SKIP_NAMES:
             continue
         if relative.suffix == ".zip":
             continue
@@ -63,7 +67,7 @@ def shipped_files():
 def main():
     manifest = json.loads((ROOT / "manifest.json").read_text())
     version = manifest["version"]
-    out = ROOT.parent / f"slop-lens-{version}.zip"
+    out = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT.parent / f"slop-lens-{version}.zip"
 
     files = list(shipped_files())
     present = {path.as_posix() for path in files}

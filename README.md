@@ -1,12 +1,12 @@
 # Slop Lens
 
-Scores the page you are reading for AI-slop writing patterns, and highlights
-the passages that triggered the score.
+A [free Fenko tool](https://fenko.nz/slop-lens/) that scores writing patterns
+and highlights the passages behind the score. It does not establish AI
+authorship or provenance.
 
-Runs entirely in your browser. The manifest requests no host permissions, so
-the extension has no network access at all: not to a scoring API, not to
-telemetry, not to anything. Nothing about the pages you scan leaves the
-machine.
+Scoring runs entirely in your browser, with no uploads or telemetry.
+Auto-scan is optional and asks for site access. See [Privacy](PRIVACY.md) for
+permissions, local storage and external links.
 
 ![Slop Lens scoring a page, its signals, the settings and the file scorer](store/promo.gif)
 
@@ -77,6 +77,9 @@ Check a download against `SHA256SUMS` in the same release. `package.py` is
 reproducible, so the zip hash also matches a local build of the tagged commit.
 
 ## Use
+
+Settings offer System, Light and Dark themes, shared across the popup, file
+scorer and settings page. The preference stays on this device.
 
 Click the toolbar icon. It reads the article, scores it, and paints the
 matches on the page.
@@ -264,7 +267,7 @@ with the source's conventions in mind.
 
 Fenko design system: `#F5A623` amber accent, the GitHub-derived neutral
 ramp, 4px spacing grid, 8px card / 4px control radii, 150ms transitions. Light
-and dark are both first-class and follow `prefers-color-scheme`.
+and dark follow the device by default, with a local theme override in settings.
 
 Typeface is **Saira**, bundled as a variable `woff2` so it covers 100–900 from
 two files and needs no network. Regenerate the icon set with

@@ -2,6 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Slop Lens: score a file</title>
     <link rel="stylesheet" href="popup.css" />
     <style>
@@ -68,7 +69,7 @@
 
       .pick:hover {
         background: var(--accent);
-        color: var(--bg);
+        color: var(--text-on-accent);
       }
 
       .subject {
@@ -100,9 +101,10 @@
         </svg>
       </span>
       <h1>Slop Lens</h1>
+      <a class="fenko-brand" href="https://fenko.nz/slop-lens/" target="_blank" rel="noopener noreferrer">by Fenko</a>
     </header>
 
-    <main id="view">
+    <main id="view" aria-live="polite">
       <div class="dropzone" id="drop">
         <h2>Score a PDF or text file</h2>
         <p>
@@ -122,8 +124,10 @@
 
     <footer class="colophon">
       <span>slop-guard 0.5.0 rules, ported to JS. PDF text via pdf.js.</span>
+      <nav aria-label="Help"><a href="https://fenko.nz/slop-lens/#privacy" target="_blank" rel="noopener noreferrer">Privacy</a> · <a href="https://github.com/FenkoHQ/slop-lens/issues" target="_blank" rel="noopener noreferrer">Support</a></nav>
     </footer>
 
+    <script src="theme.js"></script>
     <script src="engine/util.js"></script>
     <script src="engine/markdown.js"></script>
     <script src="engine/document.js"></script>
