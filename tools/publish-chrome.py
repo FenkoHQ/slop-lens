@@ -19,8 +19,23 @@ REQUEST_TIMEOUT = 60
 
 def request(url, method, data=None, headers=None):
     req = Request(url, data=data, headers=headers or {}, method=method)
-    with urlopen(req, timeout=REQUEST_TIMEOUT) as response:
-        return json.load(response)
+    try:
+        with urlopen(req, timeout=REQUEST_TIMEOUT) as response:
+            return json.load(response)
+    except HTTPError as error:
+        if url == TOKEN_URL:
+            raise RuntimeError(f"Chrome OAuth failed: HTTP {error.code}") from None
+        try:
+            detail = json.load(error).get("error", {}).get("message", "")
+        except (ValueError, AttributeError):
+            detail = "No validation detail returned"
+        for name in ("CHROME_CLIENT_ID", "CHROME_CLIENT_SECRET", "CHROME_REFRESH_TOKEN"):
+            value = os.environ.get(name)
+            if value:
+                detail = detail.replace(value, "[redacted]")
+        if headers and headers.get("Authorization"):
+            detail = detail.replace(headers["Authorization"].removeprefix("Bearer "), "[redacted]")
+        raise RuntimeError(f"CWS {method} {url}: HTTP {error.code}: {detail}") from None
 
 
 def publish(archive):
@@ -46,6 +61,7 @@ def publish(archive):
         uploaded = request(ITEM_URL + "?projection=DRAFT", "GET", headers=headers)
     if uploaded.get("uploadState") != "SUCCESS":
         raise RuntimeError("CWS upload failed: " + json.dumps(uploaded.get("itemError", uploaded.get("uploadState"))))
+    print("Chrome Web Store upload succeeded.")
     result = request(ITEM_URL + "/publish", "POST", b"", headers)
     statuses = set(result.get("status", []))
     if not statuses or not statuses <= {"OK", "ITEM_PENDING_REVIEW"}:

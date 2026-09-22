@@ -40,3 +40,12 @@ class Publishing(unittest.TestCase):
         with patch.object(publisher, 'request', side_effect=[{'access_token': 'fixture'}, {'uploadState': 'SUCCESS'}, {'status': ['OK', 'NOT_AUTHORIZED']}]):
             with self.assertRaises(RuntimeError):
                 publisher.publish(self.archive.name)
+
+    def test_store_validation_error_is_reported(self):
+        import io
+        from urllib.error import HTTPError
+        error = HTTPError(publisher.ITEM_URL, 400, 'Bad Request', {},
+                          io.BytesIO(b'{"error":{"message":"Permission justification required"}}'))
+        with patch.object(publisher, 'urlopen', side_effect=error):
+            with self.assertRaisesRegex(RuntimeError, 'Permission justification required'):
+                publisher.request(publisher.ITEM_URL, 'POST')
