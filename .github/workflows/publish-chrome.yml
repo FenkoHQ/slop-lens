@@ -1,0 +1,62 @@
+name: Publish to Chrome Web Store
+
+on:
+  workflow_run:
+    workflows: [Release]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tested release tag
+        required: true
+        default: v0.0.5
+
+permissions:
+  contents: read
+
+concurrency:
+  group: chrome-web-store
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v6
+      - name: Test publisher
+        run: uv run --no-project -m unittest discover -s test -p 'publish_chrome_test.py'
+      - name: Download and verify release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.event.workflow_run.head_branch }}
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || exit 1
+          gh release download "$TAG" --repo FenkoHQ/slop-lens --pattern "slop-lens-${TAG#v}.zip" --pattern SHA256SUMS --dir dist
+          gh api "repos/FenkoHQ/slop-lens/commits/$TAG" > dist/commit.json
+          gh run list --repo FenkoHQ/slop-lens --workflow release.yml --branch "$TAG" --status success --json headSha,event --limit 20 > dist/runs.json
+          uv run --no-project python - <<'PY'
+          import hashlib, json, os, pathlib, zipfile
+          commit = json.loads(pathlib.Path('dist/commit.json').read_text())['sha']
+          runs = json.loads(pathlib.Path('dist/runs.json').read_text())
+          assert any(run['headSha'] == commit and run['event'] == 'push' for run in runs), 'No successful release checks for this tag'
+          version = os.environ['TAG'][1:]
+          name = f'slop-lens-{version}.zip'
+          archive = pathlib.Path('dist') / name
+          sums = dict(line.split(maxsplit=1)[::-1] for line in pathlib.Path('dist/SHA256SUMS').read_text().splitlines())
+          assert hashlib.sha256(archive.read_bytes()).hexdigest() == sums[name]
+          with zipfile.ZipFile(archive) as package:
+              manifest = json.loads(package.read('manifest.json'))
+          assert manifest['name'] == 'Slop Lens' and manifest['version'] == version
+          with open(os.environ['GITHUB_ENV'], 'a') as output:
+              output.write(f'CHROME_ARCHIVE={archive}\n')
+          PY
+      - name: Upload and submit for review
+        env:
+          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
+          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
+          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+        run: uv run --no-project tools/publish-chrome.py "$CHROME_ARCHIVE"
