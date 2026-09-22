@@ -145,7 +145,7 @@
       await api.scripting.executeScript({ target: { tabId: tab.id }, files: INJECT_FILES });
       // Opening a timed-out scan offers consent instead of restarting work.
       const previous = await callPage(tab.id, "outcome");
-      const scan = mode !== "selection" && previous?.code === "timeout" && timeoutMs === POPUP_READY_TIMEOUT_MS
+      const scan = previous?.code === "timeout" && timeoutMs === POPUP_READY_TIMEOUT_MS
         ? previous : await callPage(tab.id, "scanWhenReady", {
         mode,
         timeoutMs,

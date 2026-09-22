@@ -620,10 +620,15 @@ async function probeAutoScan(checks) {
           const line = Array.from({ length: 4000 }, (_, i) => "word" + i.toString(36)).join(" ");
           document.body.replaceChildren(document.createElement("article"));
           document.querySelector("article").textContent = [line, line, line].join("\\n\\n");
+          const selection = window.getSelection();
+          const range = document.createRange();
+          range.selectNodeContents(document.querySelector("article"));
+          selection.removeAllRanges();
+          selection.addRange(range);
           let ticks = 0;
           const timer = setInterval(() => ticks++, 20);
           const start = Date.now();
-          const scan = await globalThis.__slopLens.scanWhenReady({ mode: "page", timeoutMs: 3000 });
+          const scan = await globalThis.__slopLens.scanWhenReady({ mode: "selection", timeoutMs: 3000 });
           clearInterval(timer);
           return { scan, elapsed: Date.now() - start, ticks };
         },
@@ -642,12 +647,12 @@ async function probeAutoScan(checks) {
     await new Promise(resolve => setTimeout(resolve, 500));
     const retry = await evaluate(popupClient, `(async () => {
       chrome.tabs.query = async () => [{ id: ${heavy?.tabId} }];
-      await globalThis.__slopLensPopup.run("page");
+      await globalThis.__slopLensPopup.run("selection");
       const button = [...document.querySelectorAll("button")].find(b => b.textContent === "Try for up to 30 seconds");
       if (!button) return { offered: false, text: document.body.innerText };
       button.click();
       const deadline = Date.now() + 32000;
-      while (Date.now() < deadline && document.querySelector("#view > .status")?.textContent === "Reading page…") {
+      while (Date.now() < deadline && ["Reading page…", "Scoring selection…"].includes(document.querySelector("#view > .status")?.textContent)) {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
       return { offered: true, completed: !document.querySelector("#view > .status"), text: document.querySelector("#view").innerText.slice(0, 150) };

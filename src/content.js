@@ -40,6 +40,7 @@
   let scanToken = 0;
   let lastOutcome = null;
   let outcomeUrl = null;
+  let outcomeSelection = null;
   const LONG_TIMEOUT_MS = 30000;
   const MAX_TEXT_CHARS = 500000;
   const MAX_HIGHLIGHTS = 200;
@@ -365,6 +366,7 @@
     const deadline = Date.now() + Math.min(settings.timeoutMs || READY_TIMEOUT_MS, LONG_TIMEOUT_MS);
     const token = ++scanToken;
     const scanUrl = location.href;
+    const scannedSelection = selectionText();
     lastScan = null;
     try {
       let result = await scan(mode, deadline, token);
@@ -387,6 +389,7 @@
       lastOutcome = error.code === "timeout" ? timeoutResult() : { ok: false, error: error.message };
     }
     outcomeUrl = scanUrl;
+    outcomeSelection = scannedSelection;
     return lastOutcome;
   }
 
@@ -436,7 +439,7 @@
     focusViolation,
     highlightAll,
     scan: (mode) => scanWhenReady({ mode }),
-    outcome: () => outcomeUrl === location.href && !selectionText().trim() ? lastOutcome : null,
+    outcome: () => outcomeUrl === location.href && selectionText() === outcomeSelection ? lastOutcome : null,
     scanWhenReady,
     watch,
   };
