@@ -26,6 +26,8 @@ trap 'rm -rf "$out"' EXIT
 
 uv run --no-project test/package-check.py
 
+node --test test/worker-timeout.mjs
+
 node test/run-js.mjs > "$out/js.json"
 uv run --quiet --with slop-guard==0.5.0 test/run-py.py > "$out/py.json"
 

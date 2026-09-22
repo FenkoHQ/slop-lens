@@ -166,18 +166,15 @@ back. Nothing is transmitted either way: there is still no network code.
 An automatic scan never paints highlights and never uses your selection; it
 scores the page and writes the toolbar reading, nothing else.
 
-#### Waiting for the article
+#### Scan time limits
 
-A client-rendered page reaches the load event with an empty shell, so scanning
-on that event alone finds nothing and the toolbar stays blank until you click.
-Measured on one such article: `complete` fired, the scan found no text, and a
-manual scan seconds later found 3211 words.
+Page scans stop after three seconds. Scoring runs in a separate worker that is
+terminated at the deadline. Open the popup after a timeout and choose **Try for
+up to 30 seconds** to allow a longer scan for that request only. This does not
+change automatic scanning limits.
 
-So the scan does not give up on the load event. The retry loop lives in the
-page, not in the worker, because a service worker is torn down after a few
-seconds idle while the page script lives as long as the page does. It rescans
-every few seconds, waking early on DOM changes, for up to ninety seconds, and
-reports the result back by message.
+Large pages have extraction limits. Select a smaller passage if the page is too
+large to scan safely. No partial score is shown after a timeout.
 
 Both `onUpdated` signals are acted on. Chrome commits the URL before the page
 has loaded anything, so a watch started there spends its budget on the load
@@ -292,7 +289,7 @@ the scoring formula above.
 ## Layout
 
 ```
-manifest.json          MV3, permissions: activeTab + scripting only
+manifest.json          MV3, optional site access and local worker hosting
 src/engine/            slop-guard 0.5.0 port (no DOM dependency)
   util.js              Python-compatible rounding, Unicode \w, whitespace split
   markdown.js          fenced/inline code spans and derived text views

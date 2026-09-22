@@ -8,6 +8,11 @@
 (function (root) {
   "use strict";
 
+  // Preserve cancellation state when the popup reinjects this controller.
+  if (root.__slopLens) {
+    return;
+  }
+
   const LAYER_ID = "__slop-lens-overlay";
   const MIN_RECT_SIZE = 2;
 
@@ -20,21 +25,50 @@
 
   // How long to keep waiting for a client-rendered article to appear, how long
   // one wait may last, and how much DOM quiet counts as settled.
-  const READY_TIMEOUT_MS = 10000;
+  const READY_TIMEOUT_MS = 3000;
   const SETTLE_MS = 2000;
   const QUIET_MS = 250;
 
-  // A background watch keeps trying for far longer, because nobody is waiting
-  // on it. Each pass wakes on a DOM change or after the interval, whichever
-  // comes first.
-  const WATCH_INTERVAL_MS = 3000;
-  const WATCH_TIMEOUT_MS = 90000;
+  // Automatic scans have the same deadline as a normal popup scan.
+  const WATCH_TIMEOUT_MS = 3000;
   const READING_MESSAGE = "slop-lens/reading";
 
   // Bumped on every new watch so an older loop stops when re-injected.
   let watchToken = 0;
 
   let lastScan = null;
+  let scanToken = 0;
+  let lastOutcome = null;
+  let outcomeUrl = null;
+  const LONG_TIMEOUT_MS = 30000;
+  const MAX_TEXT_CHARS = 500000;
+  const MAX_HIGHLIGHTS = 200;
+  const MAX_RECTS = 500;
+  const HIGHLIGHT_BUDGET_MS = 50;
+
+  function timeoutResult() {
+    return { ok: false, code: "timeout", error: "Scan stopped at the time limit. You can allow up to 30 seconds or select a smaller passage." };
+  }
+
+  async function scoreText(text, deadline) {
+    if (text.length > MAX_TEXT_CHARS) {
+      return { ok: false, error: "Too much text. Select a smaller passage." };
+    }
+    const remaining = deadline - Date.now();
+    if (remaining <= 0) {
+      return timeoutResult();
+    }
+    const api = root.browser || root.chrome;
+    let timer;
+    try {
+      return await Promise.race([
+        api.runtime.sendMessage({ type: "slop-lens/score", text, deadline }),
+        new Promise(resolve => { timer = setTimeout(() => resolve(timeoutResult()), remaining); }),
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
 
   function overlayLayer(create) {
     let layer = document.getElementById(LAYER_ID);
@@ -75,6 +109,9 @@
     let painted = 0;
 
     for (const rect of rects) {
+      if (painted >= MAX_RECTS) {
+        break;
+      }
       if (rect.width < MIN_RECT_SIZE || rect.height < MIN_RECT_SIZE) {
         continue;
       }
@@ -125,10 +162,13 @@
    * Below the analyzer's own short-text floor a selection is treated as a
    * stray click and ignored.
    */
-  function scan(mode) {
+  async function scan(mode, deadline, token) {
     clearHighlights();
 
     const selected = selectionText();
+    if (selected.length > MAX_TEXT_CHARS) {
+      return { ok: false, error: "Too much selected text. Select a smaller passage." };
+    }
     const selectionWords = countWords(selected);
     const wantsSelection =
       mode === "selection" ||
@@ -140,6 +180,10 @@
       }
 
       lastScan = null;
+      const scored = await scoreText(selected, deadline);
+      if (!scored?.ok) {
+        return scored || timeoutResult();
+      }
       return {
         ok: true,
         mode: "selection",
@@ -148,7 +192,7 @@
         hasSelection: true,
         selectionWords,
         highlightable: false,
-        analysis: root.SlopGuard.analyzeText(selected),
+        analysis: scored.analysis,
       };
     }
 
@@ -164,7 +208,7 @@
       };
     }
 
-    const extracted = root.SlopLens.extract(document);
+    const extracted = await root.SlopLens.extractBounded(document, deadline, () => token !== scanToken);
     if (extracted.markdown.trim().length === 0) {
       return {
         ok: false,
@@ -176,7 +220,14 @@
       };
     }
 
-    const analysis = root.SlopGuard.analyzeText(extracted.markdown);
+    const scored = await scoreText(extracted.markdown, deadline);
+    if (token !== scanToken) {
+      return { ok: false, code: "cancelled", error: "Scan replaced." };
+    }
+    if (!scored?.ok) {
+      return scored || timeoutResult();
+    }
+    const analysis = scored.analysis;
 
     // Below the analyzer's own floor there is nothing to judge, and a score of
     // "clean" would be a guess dressed as a verdict. Keep watching instead:
@@ -233,7 +284,11 @@
     const textLength = lastScan.extracted.markdown.length;
     let painted = 0;
 
-    lastScan.analysis.violations.forEach((violation, index) => {
+    const paintDeadline = Date.now() + HIGHLIGHT_BUDGET_MS;
+    lastScan.analysis.violations.slice(0, MAX_HIGHLIGHTS).forEach((violation, index) => {
+      if (Date.now() >= paintDeadline) {
+        return;
+      }
       if (!isPaintable(violation, textLength)) {
         return;
       }
@@ -307,16 +362,32 @@
   async function scanWhenReady(options) {
     const settings = options || {};
     const mode = settings.mode || "auto";
-    const deadline = Date.now() + (settings.timeoutMs || READY_TIMEOUT_MS);
-
-    let result = scan(mode);
-
-    while (!result.ok && result.retryable && Date.now() < deadline) {
-      await settled(Math.min(SETTLE_MS, Math.max(0, deadline - Date.now())));
-      result = scan(mode);
+    const deadline = Date.now() + Math.min(settings.timeoutMs || READY_TIMEOUT_MS, LONG_TIMEOUT_MS);
+    const token = ++scanToken;
+    const scanUrl = location.href;
+    lastScan = null;
+    try {
+      let result = await scan(mode, deadline, token);
+      while (!result.ok && result.retryable && Date.now() < deadline && token === scanToken) {
+        await settled(Math.min(SETTLE_MS, Math.max(0, deadline - Date.now())));
+        if (Date.now() >= deadline) {
+          break;
+        }
+        result = await scan(mode, deadline, token);
+      }
+      if (token !== scanToken || location.href !== scanUrl) {
+        lastScan = null;
+        return { ok: false, code: "cancelled", error: "Scan replaced." };
+      }
+      lastOutcome = Date.now() >= deadline || result.code === "timeout" ? timeoutResult() : result;
+    } catch (error) {
+      if (token !== scanToken) {
+        return { ok: false, code: "cancelled", error: "Scan replaced." };
+      }
+      lastOutcome = error.code === "timeout" ? timeoutResult() : { ok: false, error: error.message };
     }
-
-    return result;
+    outcomeUrl = scanUrl;
+    return lastOutcome;
   }
 
   function report(result) {
@@ -337,43 +408,35 @@
   /**
    * Keep scanning until the page yields an article, then report it.
    *
-   * Runs page-side on purpose: a background service worker is torn down after
-   * a few seconds idle, so it cannot hold a long retry loop, while this script
-   * lives exactly as long as the page it is watching. Returns immediately; the
-   * result arrives as a message.
+   * Returns immediately; extraction stays here and scoring runs in a worker.
+   * The result arrives by message before the scan deadline.
    */
   function watch(options) {
-    const settings = options || {};
-    const mode = settings.mode || "page";
-    const deadline = Date.now() + (settings.timeoutMs || WATCH_TIMEOUT_MS);
-    const token = watchToken + 1;
-    watchToken = token;
-
-    (async () => {
-      let result = scan(mode);
-
-      while (!result.ok && result.retryable && Date.now() < deadline) {
-        await settled(WATCH_INTERVAL_MS);
-
-        // A newer watch took over, or the page navigated under us.
-        if (token !== watchToken) {
-          return;
-        }
-
-        result = scan(mode);
+    const token = ++watchToken;
+    scanWhenReady({ mode: "page", timeoutMs: WATCH_TIMEOUT_MS }).then(result => {
+      if (token === watchToken && result.code !== "cancelled") {
+        report(result);
       }
-
-      report(result);
-    })();
-
+    });
     return true;
   }
+
+  const api = root.browser || root.chrome;
+  api?.runtime?.onMessage.addListener(message => {
+    if (message?.type === "slop-lens/cancel") {
+      scanToken += 1;
+      watchToken += 1;
+      lastScan = null;
+      lastOutcome = null;
+    }
+  });
 
   root.__slopLens = {
     clearHighlights,
     focusViolation,
     highlightAll,
-    scan,
+    scan: (mode) => scanWhenReady({ mode }),
+    outcome: () => outcomeUrl === location.href && !selectionText().trim() ? lastOutcome : null,
     scanWhenReady,
     watch,
   };

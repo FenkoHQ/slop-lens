@@ -67,7 +67,7 @@
   // Builder
   // ---------------------------------------------------------------------------
 
-  function createBuilder() {
+  function createBuilder(check = () => {}) {
     const parts = [];
     const map = [];
     let length = 0;
@@ -75,6 +75,7 @@
     let pendingSpace = false;
 
     function push(text) {
+      check();
       parts.push(text);
       length += text.length;
       lastChar = text[text.length - 1];
@@ -277,8 +278,9 @@
    * paragraphs in their own styled div: one such article scored 154 words out
    * of 1494 before this credited ancestors too.
    */
-  function pickRoot(doc) {
+  function pickRoot(doc, check) {
     for (const selector of ROOT_SELECTORS) {
+      check();
       const element = doc.querySelector(selector);
       if (element && textLength(element) >= MIN_ROOT_CHARS) {
         return element;
@@ -288,6 +290,7 @@
     const scores = new Map();
 
     for (const block of doc.body.querySelectorAll("p, li, blockquote")) {
+      check();
       const length = textLength(block);
       if (length < MIN_PARAGRAPH_CHARS) {
         continue;
@@ -307,6 +310,7 @@
     let bestScore = 0;
 
     for (const [element, score] of scores) {
+      check();
       if (score > bestScore && linkDensity(element) <= MAX_LINK_DENSITY) {
         best = element;
         bestScore = score;
@@ -329,8 +333,8 @@
   }
 
   /** Render a subtree into its own builder so it can be line-prefixed. */
-  function renderIsolated(element, walkChildren) {
-    const sub = createBuilder();
+  function renderIsolated(element, walkChildren, check) {
+    const sub = createBuilder(check);
     walkChildren(element, sub);
 
     return sub.result();
@@ -342,7 +346,7 @@
    * Blank lines are dropped so a multi-paragraph blockquote counts as the
    * number of quoted lines a person would actually see, not twice that.
    */
-  function prefixLines(rendered, prefix, builder) {
+  function prefixLines(rendered, prefix, builder, check) {
     const lines = rendered.text.split("\n");
     const lineStart = [];
     let cursor = 0;
@@ -370,6 +374,7 @@
     builder.rawBlock(outLines.join("\n"));
 
     for (const entry of rendered.map) {
+      check();
       let lineIndex = 0;
       while (lineIndex + 1 < lineStart.length && lineStart[lineIndex + 1] <= entry.start) {
         lineIndex += 1;
@@ -389,9 +394,41 @@
     }
   }
 
-  function extract(doc) {
-    const rootElement = pickRoot(doc);
-    const builder = createBuilder();
+  // Bound the DOM before synchronous serialization, yielding while counting it.
+  const MAX_DOM_NODES = 12000;
+  const MAX_DOM_CHARS = 500000;
+  const DOM_BATCH_SIZE = 256;
+  const SERIALIZE_SLICE_MS = 100;
+
+  async function extractBounded(doc, deadline, cancelled) {
+    const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_ALL);
+    let nodes = 0;
+    let chars = 0;
+    while (walker.nextNode()) {
+      nodes += 1;
+      chars += walker.currentNode.nodeType === Node.TEXT_NODE
+        ? walker.currentNode.nodeValue.length : 0;
+      if (nodes > MAX_DOM_NODES || chars > MAX_DOM_CHARS) {
+        throw new Error("This page is too large to scan safely. Select a smaller passage.");
+      }
+      if (nodes % DOM_BATCH_SIZE === 0) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+      if (cancelled() || Date.now() >= deadline) {
+        throw Object.assign(new Error("Scan time limit reached."), { code: "timeout" });
+      }
+    }
+    const stop = Math.min(deadline, Date.now() + SERIALIZE_SLICE_MS);
+    return extract(doc, () => {
+      if (Date.now() >= stop) {
+        throw Object.assign(new Error("Page extraction took too long. Select a smaller passage."), { code: "timeout" });
+      }
+    });
+  }
+
+  function extract(doc, check = () => {}) {
+    const rootElement = pickRoot(doc, check);
+    const builder = createBuilder(check);
 
     function walkChildren(element, target) {
       for (const child of element.childNodes) {
@@ -407,6 +444,7 @@
 
       target.breakLines(2);
       rows.forEach((row, rowIndex) => {
+        check();
         const cells = row.querySelectorAll("th, td");
         if (cells.length === 0) {
           return;
@@ -415,6 +453,7 @@
         target.breakLines(1);
         target.inline("| ");
         cells.forEach((cell, cellIndex) => {
+          check();
           if (cellIndex > 0) {
             target.inline(" | ");
           }
@@ -436,6 +475,7 @@
 
       target.breakLines(2);
       for (const child of list.children) {
+        check();
         if (child.tagName !== "LI" || !isVisible(child)) {
           continue;
         }
@@ -449,6 +489,7 @@
     }
 
     function walk(node, target) {
+      check();
       if (node.nodeType === Node.TEXT_NODE) {
         const parent = node.parentElement;
 
@@ -523,7 +564,7 @@
 
       if (tag === "BLOCKQUOTE") {
         target.breakLines(2);
-        prefixLines(renderIsolated(node, walkChildren), "> ", target);
+        prefixLines(renderIsolated(node, walkChildren, check), "> ", target, check);
         target.breakLines(2);
         return;
       }
@@ -605,5 +646,5 @@
     return range;
   }
 
-  root.SlopLens = Object.assign(root.SlopLens || {}, { extract, rangeForSpan });
+  root.SlopLens = Object.assign(root.SlopLens || {}, { extract, extractBounded, rangeForSpan });
 })(typeof globalThis !== "undefined" ? globalThis : this);

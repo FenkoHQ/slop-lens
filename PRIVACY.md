@@ -27,7 +27,8 @@ session ends. Browsers without session storage do not retain those readings.
 | Permission | Purpose |
 | --- | --- |
 | `activeTab` | Access the tab when you invoke the extension. |
-| `scripting` | Run the local analyzer in that tab. |
+| `scripting` | Extract page text and show highlights in that tab. |
+| `offscreen` | Host local scoring workers in Chrome so scans can be stopped without blocking the page. |
 | `storage` | Save device-local preferences and temporary readings. |
 | `<all_urls>` (optional) | Read pages for auto-scan. Requested when enabled; the extension requests removal when disabled. |
 

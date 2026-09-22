@@ -570,8 +570,8 @@ async function probeAutoScan(checks) {
       badged(deferred),
     ]);
     checks.push([
-      "auto-scan: an article arriving after 14s is still caught",
-      badged(slow),
+      "auto-scan: an article arriving after the deadline is not scanned",
+      Boolean(slow) && slow.badge === "",
     ]);
     checks.push([
       "auto-scan: a page with no article shows no number",
@@ -594,7 +594,7 @@ async function probeAutoScan(checks) {
            func: () => {
              const extracted = globalThis.SlopLens.extract(document);
              return {
-               words: globalThis.SlopGuard.analyzeText(extracted.markdown).word_count,
+               words: extracted.markdown.trim().split(/\s+/).length,
                bodyWords: document.body.textContent.trim().split(/\s+/).length,
                root: extracted.rootElement.tagName,
              };
@@ -609,6 +609,53 @@ async function probeAutoScan(checks) {
       "extraction: a page with no semantic container still yields most of its prose",
       Boolean(fragmented && fragmented.words >= fragmented.bodyWords * 0.8),
     ]);
+
+    // Repeated quoted prose reproduces the webmail freeze without account data.
+    const heavy = await evaluate(client, `(async () => {
+      const tabs = await chrome.tabs.query({});
+      const tab = tabs.find(t => (t.url || "").endsWith("/fragmented"));
+      const [{ result }] = await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        func: async () => {
+          const line = Array.from({ length: 4000 }, (_, i) => "word" + i.toString(36)).join(" ");
+          document.body.replaceChildren(document.createElement("article"));
+          document.querySelector("article").textContent = [line, line, line].join("\\n\\n");
+          let ticks = 0;
+          const timer = setInterval(() => ticks++, 20);
+          const start = Date.now();
+          const scan = await globalThis.__slopLens.scanWhenReady({ mode: "page", timeoutMs: 3000 });
+          clearInterval(timer);
+          return { scan, elapsed: Date.now() - start, ticks };
+        },
+      });
+      return { ...result, tabId: tab.id };
+    })()`);
+    console.log("bounded scan:", JSON.stringify(heavy));
+    checks.push(["slow scan: stops at three seconds", heavy?.scan?.code === "timeout" && heavy.elapsed < 3800]);
+    checks.push(["slow scan: page stays responsive", heavy?.ticks > 50]);
+
+    const popupResponse = await fetch(
+      `http://127.0.0.1:${port}/json/new?chrome-extension://${id}/src/popup.html`, { method: "PUT" });
+    const popupClient = connect((await popupResponse.json()).webSocketDebuggerUrl);
+    await popupClient.ready;
+    await popupClient.send("Runtime.enable");
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const retry = await evaluate(popupClient, `(async () => {
+      chrome.tabs.query = async () => [{ id: ${heavy?.tabId} }];
+      await globalThis.__slopLensPopup.run("page");
+      const button = [...document.querySelectorAll("button")].find(b => b.textContent === "Try for up to 30 seconds");
+      if (!button) return { offered: false, text: document.body.innerText };
+      button.click();
+      const deadline = Date.now() + 32000;
+      while (Date.now() < deadline && document.querySelector("#view > .status")?.textContent === "Reading page…") {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      return { offered: true, completed: !document.querySelector("#view > .status"), text: document.querySelector("#view").innerText.slice(0, 150) };
+    })()`);
+    console.log("long retry:", JSON.stringify(retry));
+    checks.push(["popup: timeout offers an explicit longer scan", retry?.offered === true]);
+    checks.push(["popup: longer scan completes", retry?.completed === true]);
+    popupClient.close();
 
     client.close();
   } finally {

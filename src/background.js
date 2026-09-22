@@ -9,7 +9,7 @@
  * is why the dependencies are pulled in two ways.
  */
 if (typeof importScripts === "function" && !globalThis.SlopLens) {
-  importScripts("settings.js", "indicator.js");
+  importScripts("settings.js", "indicator.js", "scan-service.js");
 }
 
 (function () {
@@ -18,13 +18,6 @@ if (typeof importScripts === "function" && !globalThis.SlopLens) {
   const api = globalThis.browser || globalThis.chrome;
 
   const INJECT_FILES = [
-    "src/engine/util.js",
-    "src/engine/markdown.js",
-    "src/engine/document.js",
-    "src/engine/ngrams.js",
-    "src/engine/scoring.js",
-    "src/engine/rules.js",
-    "src/engine/engine.js",
     "src/extract.js",
     "src/content.js",
   ];
@@ -34,7 +27,7 @@ if (typeof importScripts === "function" && !globalThis.SlopLens) {
 
   // A client-rendered page reaches "complete" with an empty shell, so the page
   // keeps watching for the article rather than giving up on the load event.
-  const WATCH_TIMEOUT_MS = 90000;
+  const WATCH_TIMEOUT_MS = 3000;
   const READING_MESSAGE = "slop-lens/reading";
   const WELCOME_PAGE = "src/options.html?welcome";
 
@@ -60,9 +53,7 @@ if (typeof importScripts === "function" && !globalThis.SlopLens) {
   /**
    * Start a page-side watch and return.
    *
-   * The watch can run for a minute or more, which is far longer than this
-   * worker is kept alive, so it reports back by message instead of being
-   * awaited here.
+   * The page reports back by message after its bounded scan completes.
    */
   async function startWatch(tabId) {
     await api.scripting.executeScript({ target: { tabId }, files: INJECT_FILES });
@@ -134,6 +125,9 @@ if (typeof importScripts === "function" && !globalThis.SlopLens) {
     if (!navigated && !loaded) {
       return;
     }
+    if (navigated) {
+      globalThis.SlopLens.cancelScore(`tab:${tabId}`).catch(() => {});
+    }
     if (inFlight.has(tabId)) {
       return;
     }
@@ -168,6 +162,18 @@ if (typeof importScripts === "function" && !globalThis.SlopLens) {
     }
   });
 
+  // Revoking automatic scanning also stops work already running in a tab.
+  api.storage.onChanged.addListener((changes, area) => {
+    if (area === "local" && changes.indicator && !changes.indicator.newValue?.autoScan) {
+      globalThis.SlopLens.cancelScore(null).catch(() => {});
+      api.tabs.query({}).then(tabs => {
+        for (const tab of tabs) {
+          api.tabs.sendMessage(tab.id, { type: "slop-lens/cancel" }).catch(() => {});
+        }
+      });
+    }
+  });
+
   // First install opens settings with the auto-scan prompt. The host
   // permission stays optional, so granting it has to come from a click there.
   api.runtime.onInstalled.addListener((details) => {
@@ -180,6 +186,7 @@ if (typeof importScripts === "function" && !globalThis.SlopLens) {
 
   // A tab that closes no longer has a reading worth remembering.
   api.tabs.onRemoved.addListener((tabId) => {
+    globalThis.SlopLens.cancelScore(`tab:${tabId}`).catch(() => {});
     lastScanned.delete(tabId);
     globalThis.SlopLens.settings.forgetReading(tabId);
   });

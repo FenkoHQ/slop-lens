@@ -1,10 +1,8 @@
 /**
  * Popup controller.
  *
- * Injects the analyzer into the active tab on demand (activeTab, no host
- * permissions), asks it to scan, renders the report, and writes the toolbar
- * reading for the tab. No network calls anywhere: the manifest grants no host
- * access.
+ * Extracts text from the active tab, scores in a worker, and renders the report.
+ * Manual scans use activeTab; auto-scan site access stays optional.
  */
 (function () {
   "use strict";
@@ -12,19 +10,13 @@
   const api = globalThis.browser || globalThis.chrome;
 
   const INJECT_FILES = [
-    "src/engine/util.js",
-    "src/engine/markdown.js",
-    "src/engine/document.js",
-    "src/engine/ngrams.js",
-    "src/engine/scoring.js",
-    "src/engine/rules.js",
-    "src/engine/engine.js",
     "src/extract.js",
     "src/content.js",
   ];
 
   const SCORE_MAX = 100;
-  const POPUP_READY_TIMEOUT_MS = 4000;
+  const POPUP_READY_TIMEOUT_MS = 3000;
+  const LONG_SCAN_TIMEOUT_MS = 30000;
 
   const view = document.getElementById("view");
   let activeTabId = null;
@@ -143,7 +135,7 @@
   // Entry
   // ---------------------------------------------------------------------------
 
-  async function run(mode) {
+  async function run(mode, timeoutMs = POPUP_READY_TIMEOUT_MS) {
     showStatus(mode === "selection" ? "Scoring selection…" : "Reading page…");
 
     try {
@@ -151,14 +143,23 @@
       activeTabId = tab.id;
 
       await api.scripting.executeScript({ target: { tabId: tab.id }, files: INJECT_FILES });
-      // A shorter budget than an automatic scan: someone is watching this one.
-      const scan = await callPage(tab.id, "scanWhenReady", {
+      // Opening a timed-out scan offers consent instead of restarting work.
+      const previous = await callPage(tab.id, "outcome");
+      const scan = mode !== "selection" && previous?.code === "timeout" && timeoutMs === POPUP_READY_TIMEOUT_MS
+        ? previous : await callPage(tab.id, "scanWhenReady", {
         mode,
-        timeoutMs: POPUP_READY_TIMEOUT_MS,
+        timeoutMs,
       });
 
       if (!scan || !scan.ok) {
         showStatus((scan && scan.error) || "Scan failed.", true);
+        if (scan?.code === "timeout") {
+          const retry = document.createElement("button");
+          retry.type = "button";
+          retry.textContent = "Try for up to 30 seconds";
+          retry.addEventListener("click", () => run(mode, LONG_SCAN_TIMEOUT_MS));
+          view.querySelector(".actions").prepend(retry);
+        }
         return;
       }
 
